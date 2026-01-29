@@ -1,5 +1,6 @@
 import React, { useMemo, useEffect, useState } from "react";
 import { startOfWeek, addDays, format } from "date-fns";
+import { useNavigate } from "react-router-dom";
 
 import CalendarPanel from "../components/CalendarPanel.jsx";
 import WeeklyGrid from "../components/WeeklyGrid.jsx";
@@ -17,36 +18,27 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 
-export default function MainPage({ user, onLogout }) {
+export default function PlannerPage({ user, onLogout }) {
+  const nav = useNavigate();
   const uid = user?.uid;
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [rightMode, setRightMode] = useState("week"); // "week" | "todo"
 
-  // ✅ 일요일부터 시작하는 주간 7일
   const weekDays = useMemo(() => {
     const start = startOfWeek(selectedDate, { weekStartsOn: 0 });
     return Array.from({ length: 7 }, (_, i) => addDays(start, i));
   }, [selectedDate]);
 
-  const weekStartKey = useMemo(
-    () => format(weekDays[0], "yyyy-MM-dd"),
-    [weekDays]
-  );
-  const weekEndKey = useMemo(
-    () => format(weekDays[6], "yyyy-MM-dd"),
-    [weekDays]
-  );
+  const weekStartKey = useMemo(() => format(weekDays[0], "yyyy-MM-dd"), [weekDays]);
+  const weekEndKey = useMemo(() => format(weekDays[6], "yyyy-MM-dd"), [weekDays]);
 
-  // ====== ✅ 주간 events (Firestore) ======
   const [events, setEvents] = useState([]);
 
   useEffect(() => {
     if (!uid) return;
 
     const colRef = collection(db, "users", uid, "events");
-
-    // ✅ yyyy-MM-dd 문자열은 사전순이 날짜순이라 범위 조회 가능
     const q = query(
       colRef,
       where("dateKey", ">=", weekStartKey),
@@ -57,30 +49,23 @@ export default function MainPage({ user, onLogout }) {
       q,
       (snap) => {
         const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-
-        // 보기 좋게 정렬(프론트 정렬)
         list.sort((a, b) => {
           if (a.dateKey !== b.dateKey) return a.dateKey.localeCompare(b.dateKey);
           return (a.startHour ?? 0) - (b.startHour ?? 0);
         });
-
         setEvents(list);
       },
-      (err) => {
-        console.error("EVENTS SNAPSHOT ERROR =", err);
-      }
+      (err) => console.error("EVENTS SNAPSHOT ERROR =", err)
     );
 
     return () => unsub();
   }, [uid, weekStartKey, weekEndKey]);
 
-  // 캘린더 날짜 클릭 → 투두 모드로 전환
   const handleChangeDate = (date) => {
     setSelectedDate(date);
     setRightMode("todo");
   };
 
-  // ✅ 주간 이동(이전/다음)
   const goPrevWeek = () => {
     setSelectedDate((prev) => addDays(prev, -7));
     setRightMode("week");
@@ -91,7 +76,6 @@ export default function MainPage({ user, onLogout }) {
     setRightMode("week");
   };
 
-  // ✅ 일정 추가 (WeeklyGrid 모달에서 받은 값 그대로 저장)
   const handleAddEvent = async ({ dateKey, startHour, title, duration, color }) => {
     if (!uid) return alert("로그인이 필요합니다.");
 
@@ -110,7 +94,6 @@ export default function MainPage({ user, onLogout }) {
     }
   };
 
-  // ✅ 일정 삭제
   const handleDeleteEvent = async (eventId) => {
     if (!uid) return;
 
@@ -128,10 +111,14 @@ export default function MainPage({ user, onLogout }) {
   return (
     <div className="page main-page">
       <header className="topbar">
-        <div className="brand">Todo Planner</div>
-        <button className="btn" onClick={onLogout}>
-          로그아웃
-        </button>
+        <div className="brand" style={{ cursor: "pointer" }} onClick={() => nav("/home")}>
+          Todo Planner
+        </div>
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn" onClick={() => nav("/subjects")}>과목 관리</button>
+          <button className="btn" onClick={onLogout}>로그아웃</button>
+        </div>
       </header>
 
       <div className="main-layout">
