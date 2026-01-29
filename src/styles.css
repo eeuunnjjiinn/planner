@@ -314,3 +314,11 @@ body {
   gap: 10px;
   margin-top: 16px;
 }
+
+
+.card{
+  background:#fff;
+  border:1px solid #e5e7eb;
+  border-radius:20px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.04);
+}
