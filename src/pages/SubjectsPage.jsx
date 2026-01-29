@@ -1,31 +1,56 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { format } from "date-fns";
-
-import { db } from "../firebase";
 import {
-  addDoc,
   collection,
+  addDoc,
   deleteDoc,
   doc,
   onSnapshot,
-  orderBy,
   query,
+  orderBy,
   serverTimestamp,
 } from "firebase/firestore";
+import { db } from "../firebase";
+
+const DAYS = ["월", "화", "수", "목", "금"];
+const DAY_VALUE = { 월: 1, 화: 2, 수: 3, 목: 4, 금: 5 };
+
+// 시간표 범위 (원하면 조절)
+const START_HOUR = 8;
+const END_HOUR = 20;
+
+function timeToMin(t) {
+  // "09:30" -> 570
+  const [hh, mm] = t.split(":").map(Number);
+  return hh * 60 + mm;
+}
+
+function clamp(n, min, max) {
+  return Math.max(min, Math.min(max, n));
+}
 
 export default function SubjectsPage({ user, onLogout }) {
   const nav = useNavigate();
   const uid = user?.uid;
 
-  // ===== 과목 목록 =====
   const [subjects, setSubjects] = useState([]);
+  const [isAddOpen, setIsAddOpen] = useState(false);
+
+  // add form
+  const [name, setName] = useState("");
+  const [professor, setProfessor] = useState("");
+  const [place, setPlace] = useState("");
+  const [dayKorean, setDayKorean] = useState("월");
+  const [startTime, setStartTime] = useState("09:00");
+  const [endTime, setEndTime] = useState("10:15");
 
   useEffect(() => {
     if (!uid) return;
 
-    const colRef = collection(db, "users", uid, "subjects");
-    const q = query(colRef, orderBy("createdAt", "desc"));
+    const q = query(
+      collection(db, "users", uid, "subjects"),
+      orderBy("createdAt", "desc")
+    );
 
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -35,109 +60,85 @@ export default function SubjectsPage({ user, onLogout }) {
     return () => unsub();
   }, [uid]);
 
-  // ===== 과목 추가 폼 =====
-  const [subName, setSubName] = useState("");
-  const [professor, setProfessor] = useState("");
-  const [place, setPlace] = useState("");
-  const [timeLocal, setTimeLocal] = useState(""); // datetime-local
+  const timeRows = useMemo(() => {
+    const rows = [];
+    for (let h = START_HOUR; h <= END_HOUR; h++) rows.push(h);
+    return rows;
+  }, []);
 
-  const addSubject = async () => {
-    if (!uid) return alert("로그인이 필요합니다.");
-    const name = subName.trim();
-    if (!name) return alert("과목명을 입력해 주세요.");
+  const blocks = useMemo(() => {
+    // day(1~5), startTime, endTime 있는 것만 시간표에 표시
+    return subjects
+      .filter((s) => s.day && s.startTime && s.endTime)
+      .map((s) => {
+        const start = timeToMin(s.startTime);
+        const end = timeToMin(s.endTime);
+        const gridStart = START_HOUR * 60;
+        const gridEnd = END_HOUR * 60;
 
-    try {
-      const colRef = collection(db, "users", uid, "subjects");
-      await addDoc(colRef, {
-        name,
-        professor: professor.trim(),
-        place: place.trim(),
-        time: timeLocal ? new Date(timeLocal) : null, // Firestore가 Timestamp로 저장
-        createdAt: serverTimestamp(),
+        const top = ((start - gridStart) / (gridEnd - gridStart)) * 100;
+        const height = ((end - start) / (gridEnd - gridStart)) * 100;
+
+        return {
+          ...s,
+          top: clamp(top, 0, 100),
+          height: clamp(height, 2, 100),
+        };
       });
+  }, [subjects]);
 
-      setSubName("");
-      setProfessor("");
-      setPlace("");
-      setTimeLocal("");
-    } catch (e) {
-      console.error(e);
-      alert(`과목 추가 실패: ${e?.message || e}`);
+  async function addSubject(e) {
+    e.preventDefault();
+    if (!uid) return;
+    if (!name.trim()) return;
+
+    const day = DAY_VALUE[dayKorean];
+    if (!day) return;
+
+    // 간단한 검증: endTime > startTime
+    if (timeToMin(endTime) <= timeToMin(startTime)) {
+      alert("끝나는 시간이 시작 시간보다 늦어야 해요.");
+      return;
     }
-  };
 
-  const deleteSubject = async (id) => {
-    if (!uid) return;
-    const ok = confirm("이 과목을 삭제할까요?");
-    if (!ok) return;
-    await deleteDoc(doc(db, "users", uid, "subjects", id));
-  };
-
-  // ===== 시험/과제 =====
-  const [items, setItems] = useState([]);
-  const [selectedSubjectId, setSelectedSubjectId] = useState("");
-
-  useEffect(() => {
-    if (!uid) return;
-
-    const colRef = collection(db, "users", uid, "assessments");
-    const q = query(colRef, orderBy("date", "asc"));
-
-    const unsub = onSnapshot(q, (snap) => {
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setItems(list);
+    await addDoc(collection(db, "users", uid, "subjects"), {
+      name: name.trim(),
+      professor: professor.trim(),
+      place: place.trim(),
+      day,
+      startTime,
+      endTime,
+      createdAt: serverTimestamp(),
     });
 
-    return () => unsub();
-  }, [uid]);
+    setName("");
+    setProfessor("");
+    setPlace("");
+    setDayKorean("월");
+    setStartTime("09:00");
+    setEndTime("10:15");
+    setIsAddOpen(false);
+  }
 
-  const filteredItems = useMemo(() => {
-    if (!selectedSubjectId) return items;
-    return items.filter((x) => x.subjectId === selectedSubjectId);
-  }, [items, selectedSubjectId]);
-
-  const [type, setType] = useState("시험");
-  const [title, setTitle] = useState("");
-  const [dateLocal, setDateLocal] = useState("");
-  const [memo, setMemo] = useState("");
-
-  const addItem = async () => {
-    if (!uid) return alert("로그인이 필요합니다.");
-    if (!selectedSubjectId) return alert("과목을 선택해 주세요.");
-    const t = title.trim();
-    if (!t) return alert("제목을 입력해 주세요.");
-    if (!dateLocal) return alert("날짜/시간을 선택해 주세요.");
-
-    try {
-      await addDoc(collection(db, "users", uid, "assessments"), {
-        subjectId: selectedSubjectId,
-        type: type.trim(), // "시험" | "과제" 등
-        title: t,
-        date: new Date(dateLocal),
-        memo: memo.trim(),
-        createdAt: serverTimestamp(),
-      });
-
-      setTitle("");
-      setDateLocal("");
-      setMemo("");
-    } catch (e) {
-      console.error(e);
-      alert(`추가 실패: ${e?.message || e}`);
-    }
-  };
-
-  const deleteItem = async (id) => {
+  async function removeSubject(subjectId) {
     if (!uid) return;
-    const ok = confirm("삭제할까요?");
-    if (!ok) return;
-    await deleteDoc(doc(db, "users", uid, "assessments", id));
-  };
+    await deleteDoc(doc(db, "users", uid, "subjects", subjectId));
+  }
 
-  const subjectNameById = useMemo(() => {
-    const map = new Map(subjects.map((s) => [s.id, s.name]));
-    return (id) => map.get(id) || "(삭제된 과목)";
-  }, [subjects]);
+  if (!user) {
+    return (
+      <div className="page main-page" style={{ padding: 24 }}>
+        <div className="card" style={{ padding: 20 }}>
+          로그인 후 이용해 주세요.
+          <div style={{ marginTop: 12 }}>
+            <button className="btn primary" onClick={() => nav("/")}>
+              홈으로
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page main-page">
@@ -146,131 +147,180 @@ export default function SubjectsPage({ user, onLogout }) {
           Todo Planner
         </div>
 
-        <div style={{ display: "flex", gap: 8 }}>
-          <button className="btn" onClick={() => nav("/planner")}>플래너</button>
-          <button className="btn" onClick={onLogout}>로그아웃</button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ fontSize: 13, color: "#6b7280" }}>{user?.email}</div>
+          <button className="btn" onClick={() => nav("/planner")}>
+            캘린더
+          </button>
+          <button className="btn" onClick={onLogout}>
+            로그아웃
+          </button>
         </div>
       </header>
 
-      <div style={{ padding: 24, display: "grid", gap: 20, maxWidth: 1100, margin: "0 auto" }}>
-        {/* 과목 */}
-        <div className="card" style={{ padding: 18 }}>
-          <h2 style={{ marginTop: 0 }}>📚 과목</h2>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div>
-              <div className="label">과목명</div>
-              <input className="input" value={subName} onChange={(e) => setSubName(e.target.value)} />
-            </div>
-            <div>
-              <div className="label">교수</div>
-              <input className="input" value={professor} onChange={(e) => setProfessor(e.target.value)} />
-            </div>
-            <div>
-              <div className="label">강의실</div>
-              <input className="input" value={place} onChange={(e) => setPlace(e.target.value)} />
-            </div>
-            <div>
-              <div className="label">시간(선택)</div>
-              <input className="input" type="datetime-local" value={timeLocal} onChange={(e) => setTimeLocal(e.target.value)} />
+      <div className="subjects-wrap">
+        <div className="subjects-header">
+          <div>
+            <div className="subjects-title">시간표</div>
+            <div className="subjects-sub">
+              에타처럼 주간 시간표에 과목을 배치해요. (시험/과제 표시는 다음 단계)
             </div>
           </div>
 
-          <div style={{ marginTop: 12 }}>
-            <button className="btn primary" onClick={addSubject}>과목 추가</button>
-          </div>
-
-          <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
-            {subjects.length === 0 ? (
-              <div style={{ color: "#6b7280" }}>아직 과목이 없어요.</div>
-            ) : (
-              subjects.map((s) => (
-                <div key={s.id} style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                  <div>
-                    <div style={{ fontWeight: 800 }}>{s.name}</div>
-                    <div style={{ fontSize: 13, color: "#6b7280" }}>
-                      {s.professor ? `교수: ${s.professor} · ` : ""}
-                      {s.place ? `장소: ${s.place} · ` : ""}
-                      {s.time?.toDate
-                        ? `시간: ${format(s.time.toDate(), "yyyy-MM-dd HH:mm")}`
-                        : ""}
-                    </div>
-                  </div>
-                  <button className="btn" onClick={() => deleteSubject(s.id)}>삭제</button>
-                </div>
-              ))
-            )}
+          <div style={{ display: "flex", gap: 10 }}>
+            <button className="btn primary" onClick={() => setIsAddOpen(true)}>
+              + 과목 추가
+            </button>
           </div>
         </div>
 
-        {/* 시험/과제 */}
-        <div className="card" style={{ padding: 18 }}>
-          <h2 style={{ marginTop: 0 }}>📝 시험/과제</h2>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-            <div>
-              <div className="label">과목 선택</div>
-              <select className="input" value={selectedSubjectId} onChange={(e) => setSelectedSubjectId(e.target.value)}>
-                <option value="">(선택)</option>
-                {subjects.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <div className="label">유형</div>
-              <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
-                <option value="시험">시험</option>
-                <option value="과제">과제</option>
-                <option value="퀴즈">퀴즈</option>
-                <option value="발표">발표</option>
-              </select>
-            </div>
-
-            <div>
-              <div className="label">날짜/시간</div>
-              <input className="input" type="datetime-local" value={dateLocal} onChange={(e) => setDateLocal(e.target.value)} />
-            </div>
-
-            <div style={{ gridColumn: "1 / span 2" }}>
-              <div className="label">제목</div>
-              <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="예: 데이터베이스 중간고사" />
-            </div>
-
-            <div>
-              <div className="label">메모</div>
-              <input className="input" value={memo} onChange={(e) => setMemo(e.target.value)} placeholder="특이사항" />
-            </div>
-          </div>
-
-          <div style={{ marginTop: 12 }}>
-            <button className="btn primary" onClick={addItem}>추가</button>
-          </div>
-
-          <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
-            {filteredItems.length === 0 ? (
-              <div style={{ color: "#6b7280" }}>등록된 시험/과제가 없어요.</div>
-            ) : (
-              filteredItems.map((it) => (
-                <div key={it.id} style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                  <div>
-                    <div style={{ fontWeight: 800 }}>
-                      [{it.type}] {it.title}
-                    </div>
-                    <div style={{ fontSize: 13, color: "#6b7280" }}>
-                      과목: {subjectNameById(it.subjectId)} ·{" "}
-                      {it.date?.toDate ? format(it.date.toDate(), "yyyy-MM-dd HH:mm") : ""}
-                      {it.memo ? ` · 메모: ${it.memo}` : ""}
-                    </div>
-                  </div>
-                  <button className="btn" onClick={() => deleteItem(it.id)}>삭제</button>
+        {/* 시간표 */}
+        <div className="timetable card">
+          <div className="timetable-grid">
+            {/* 좌측 시간 라벨 */}
+            <div className="tt-time-col">
+              <div className="tt-head tt-cell" />
+              {timeRows.map((h) => (
+                <div key={h} className="tt-time tt-cell">
+                  {String(h).padStart(2, "0")}:00
                 </div>
-              ))
-            )}
+              ))}
+            </div>
+
+            {/* 요일 컬럼 */}
+            <div className="tt-days">
+              <div className="tt-head-row">
+                {DAYS.map((d) => (
+                  <div key={d} className="tt-head tt-cell">
+                    {d}
+                  </div>
+                ))}
+              </div>
+
+              <div className="tt-body">
+                {DAYS.map((d, idx) => (
+                  <div key={d} className="tt-day-col">
+                    {/* 배경 라인(시간줄) */}
+                    {timeRows.map((h) => (
+                      <div key={`${d}-${h}`} className="tt-slot" />
+                    ))}
+
+                    {/* 과목 블록 */}
+                    {blocks
+                      .filter((b) => b.day === idx + 1) // 월=1
+                      .map((b) => (
+                        <div
+                          key={b.id}
+                          className="tt-block"
+                          style={{ top: `${b.top}%`, height: `${b.height}%` }}
+                          title={`${b.name} / ${b.place || ""}`}
+                        >
+                          <div className="tt-block-title">{b.name}</div>
+                          <div className="tt-block-sub">
+                            {b.place ? `${b.place} · ` : ""}
+                            {b.startTime}~{b.endTime}
+                          </div>
+
+                          <button
+                            className="tt-block-del"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm("이 과목을 삭제할까요?")) removeSubject(b.id);
+                            }}
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* 과목 추가 모달 */}
+      {isAddOpen && (
+        <div className="modal-overlay" onClick={() => setIsAddOpen(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-title">과목 추가</div>
+            <div className="modal-sub">요일/시간을 입력하면 시간표에 표시돼요.</div>
+
+            <form onSubmit={addSubject}>
+              <label className="modal-label">과목명</label>
+              <input
+                className="modal-input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="예) 데이터베이스"
+              />
+
+              <label className="modal-label">교수</label>
+              <input
+                className="modal-input"
+                value={professor}
+                onChange={(e) => setProfessor(e.target.value)}
+                placeholder="예) 김수현"
+              />
+
+              <label className="modal-label">강의실</label>
+              <input
+                className="modal-input"
+                value={place}
+                onChange={(e) => setPlace(e.target.value)}
+                placeholder="예) M503"
+              />
+
+              <div className="modal-row" style={{ marginTop: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <label className="modal-label">요일</label>
+                  <select
+                    className="modal-input"
+                    value={dayKorean}
+                    onChange={(e) => setDayKorean(e.target.value)}
+                  >
+                    {DAYS.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ flex: 1 }}>
+                  <label className="modal-label">시작</label>
+                  <input
+                    className="modal-input"
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                  />
+                </div>
+
+                <div style={{ flex: 1 }}>
+                  <label className="modal-label">끝</label>
+                  <input
+                    className="modal-input"
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="modal-actions">
+                <button type="button" className="btn" onClick={() => setIsAddOpen(false)}>
+                  취소
+                </button>
+                <button type="submit" className="btn primary">
+                  저장
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
