@@ -21,11 +21,37 @@ const START_HOUR = 8;
 const END_HOUR = 20;
 
 function timeToMin(t) {
-  const [hh, mm] = t.split(":").map(Number);
+  if (!t) return NaN;
+  const [hh, mm] = String(t).split(":").map(Number);
   return hh * 60 + mm;
 }
+
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
+}
+
+/**
+ * ✅ 같은 요일(day) 내에서 시간이 겹치는지 검사
+ * - 구간은 [start, end) 로 계산 (끝나는 시간이 다음 수업 시작과 같으면 "겹치지 않음")
+ * - excludeId: 수정일 때 자기 자신은 제외
+ */
+function hasOverlap({ subjects, day, startTime, endTime, excludeId = null }) {
+  const ns = timeToMin(startTime);
+  const ne = timeToMin(endTime);
+  if (Number.isNaN(ns) || Number.isNaN(ne)) return false;
+
+  return subjects.some((s) => {
+    if (excludeId && s.id === excludeId) return false;
+    if (s.day !== day) return false;
+    if (!s.startTime || !s.endTime) return false;
+
+    const os = timeToMin(s.startTime);
+    const oe = timeToMin(s.endTime);
+    if (Number.isNaN(os) || Number.isNaN(oe)) return false;
+
+    // 겹침 조건: newStart < oldEnd && newEnd > oldStart
+    return ns < oe && ne > os;
+  });
 }
 
 export default function SubjectsPage({ user, onLogout }) {
@@ -118,8 +144,22 @@ export default function SubjectsPage({ user, onLogout }) {
     const day = DAY_VALUE[dayKorean];
     if (!day) return;
 
+    // 기본 유효성
     if (timeToMin(endTime) <= timeToMin(startTime)) {
       alert("끝나는 시간이 시작 시간보다 늦어야 해요.");
+      return;
+    }
+
+    // 과목 추가 시 겹치는지 검사
+    const overlapped = hasOverlap({
+      subjects,
+      day,
+      startTime,
+      endTime,
+    });
+
+    if (overlapped) {
+      alert("다른 수업과 시간이 겹칩니다.");
       return;
     }
 
@@ -156,6 +196,20 @@ export default function SubjectsPage({ user, onLogout }) {
 
     if (timeToMin(eEndTime) <= timeToMin(eStartTime)) {
       alert("끝나는 시간이 시작 시간보다 늦어야 해요.");
+      return;
+    }
+
+    // 과목 수정 시 겹치는지 검사
+    const overlapped = hasOverlap({
+      subjects,
+      day,
+      startTime: eStartTime,
+      endTime: eEndTime,
+      excludeId: editing.id,
+    });
+
+    if (overlapped) {
+      alert("다른 수업과 시간이 겹칩니다.");
       return;
     }
 
@@ -363,7 +417,11 @@ export default function SubjectsPage({ user, onLogout }) {
               </div>
 
               <div className="modal-actions">
-                <button type="button" className="btn" onClick={() => setIsAddOpen(false)}>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => setIsAddOpen(false)}
+                >
                   취소
                 </button>
                 <button type="submit" className="btn primary">
@@ -441,17 +499,20 @@ export default function SubjectsPage({ user, onLogout }) {
                 </div>
               </div>
 
-              <div className="modal-actions" style={{ justifyContent: "space-between" }}>
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={removeSubject}
-                >
+              <div
+                className="modal-actions"
+                style={{ justifyContent: "space-between" }}
+              >
+                <button type="button" className="btn" onClick={removeSubject}>
                   삭제
                 </button>
 
                 <div style={{ display: "flex", gap: 10 }}>
-                  <button type="button" className="btn" onClick={() => setIsEditOpen(false)}>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => setIsEditOpen(false)}
+                  >
                     닫기
                   </button>
                   <button type="submit" className="btn primary">
