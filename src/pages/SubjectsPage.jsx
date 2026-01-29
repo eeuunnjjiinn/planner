@@ -20,6 +20,44 @@ const DAY_LABEL = { 1: "월", 2: "화", 3: "수", 4: "목", 5: "금" };
 const START_HOUR = 8;
 const END_HOUR = 20;
 
+const COLOR_PRESETS = [
+  "#2563eb", "#7c3aed", "#db2777", "#ef4444", "#f97316",
+  "#eab308", "#22c55e", "#10b981", "#06b6d4", "#64748b",
+  "#111827", "#a3a3a3",
+];
+
+function ColorPicker({ value, onChange }) {
+  return (
+    <div className="sp-color">
+      <div className="sp-color-row">
+        {COLOR_PRESETS.map((c) => (
+          <button
+            key={c}
+            type="button"
+            className={`sp-color-dot ${value === c ? "is-active" : ""}`}
+            style={{ background: c }}
+            onClick={() => onChange(c)}
+            aria-label={`색상 ${c}`}
+          />
+        ))}
+        <label className="sp-color-custom">
+          직접 선택
+          <input
+            type="color"
+            value={value || "#2563eb"}
+            onChange={(e) => onChange(e.target.value)}
+          />
+        </label>
+      </div>
+      <div className="sp-color-preview">
+        <span className="sp-color-chip" style={{ background: value || "#2563eb" }} />
+        <span className="sp-color-text">{value || "#2563eb"}</span>
+      </div>
+    </div>
+  );
+}
+
+
 function timeToMin(t) {
   if (!t) return NaN;
   const [hh, mm] = String(t).split(":").map(Number);

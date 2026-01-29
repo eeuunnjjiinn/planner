@@ -581,3 +581,26 @@ body{
 
 .tt-block { cursor: pointer; }
 .tt-block:hover { filter: brightness(0.98); transform: translateY(-1px); }
+
+
+/* 공통 폼 */
+.sp-field { display: grid; gap: 6px; }
+.sp-label { font-size: 13px; color: #64748b; }
+.sp-select {
+  height: 42px; border: 1px solid #e2e8f0; border-radius: 12px;
+  padding: 0 12px; background: white;
+}
+
+/* 컬러픽 */
+.sp-color { display: grid; gap: 10px; }
+.sp-color-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.sp-color-dot {
+  width: 22px; height: 22px; border-radius: 999px; border: 2px solid transparent;
+  cursor: pointer;
+}
+.sp-color-dot.is-active { border-color: #111827; }
+.sp-color-custom { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #64748b; }
+.sp-color-custom input[type="color"] { width: 34px; height: 26px; border: 0; padding: 0; background: transparent; }
+.sp-color-preview { display: flex; gap: 10px; align-items: center; }
+.sp-color-chip { width: 18px; height: 18px; border-radius: 6px; border: 1px solid #e2e8f0; }
+.sp-color-text { font-size: 12px; color: #64748b; }
