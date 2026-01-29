@@ -578,6 +578,3 @@ body{
   cursor: pointer;
   font-size: 12px;
 }
-
-.tt-block { cursor: pointer; }
-.tt-block:hover { filter: brightness(0.98); transform: translateY(-1px); }
