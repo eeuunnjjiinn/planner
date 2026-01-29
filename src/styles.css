@@ -450,3 +450,131 @@ body{
   font-weight: 700;
   color: #2563eb;
 }
+
+
+
+/* ===== Subjects (Timetable) ===== */
+.subjects-wrap{
+  padding: 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.subjects-header{
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.subjects-title{
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.subjects-sub{
+  margin-top: 6px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* timetable */
+.timetable{
+  padding: 16px;
+  border-radius: 20px;
+}
+
+.timetable-grid{
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 12px;
+}
+
+.tt-time-col{
+  display: grid;
+  grid-template-rows: 46px repeat(13, 1fr);
+}
+
+.tt-days{
+  display: grid;
+  grid-template-rows: 46px 1fr;
+  min-height: 700px;
+}
+
+.tt-head-row{
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+.tt-body{
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+.tt-cell{
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #fbfdff;
+  font-weight: 800;
+  color: #111827;
+}
+
+.tt-time{
+  border: 1px solid #eef2f7;
+  background: #fff;
+  color: #6b7280;
+  font-weight: 700;
+}
+
+.tt-day-col{
+  position: relative;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  overflow: hidden;
+}
+
+.tt-slot{
+  height: calc(100% / 13);
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.tt-block{
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  border-radius: 14px;
+  padding: 10px 10px 8px 10px;
+  background: #2563eb;
+  color: #fff;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.14);
+  display: grid;
+  gap: 6px;
+}
+
+.tt-block-title{
+  font-weight: 900;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.tt-block-sub{
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.tt-block-del{
+  justify-self: start;
+  border: 1px solid rgba(255,255,255,0.4);
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 12px;
+}

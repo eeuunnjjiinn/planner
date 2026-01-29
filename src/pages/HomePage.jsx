@@ -10,15 +10,22 @@ export default function HomePage({ user, onLogout }) {
   return (
     <div className="page main-page">
       <header className="topbar">
-        <div className="brand">Todo Planner</div>
+        <div
+            className="brand"
+            style={{ cursor: "pointer" }}
+            onClick={() => nav("/home")}
+        >
+            Todo Planner
+        </div>
 
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <div style={{ fontSize: 13, color: "#6b7280" }}>{user?.email}</div>
-          <button className="btn" onClick={onLogout}>
-            로그아웃
-          </button>
+            <div style={{ fontSize: 13, color: "#6b7280" }}>{user?.email}</div>
+
+            <button className="btn" onClick={onLogout}>
+                로그아웃
+            </button>
         </div>
-      </header>
+        </header>
 
       <div className="home-wrap">
         <div className="home-square">
