@@ -29,7 +29,6 @@ export default function HomePage({ user, onLogout }) {
             </p>
 
             <div className="home-cards">
-              {/* 플래너 카드 전체 클릭 */}
               <button
                 type="button"
                 className="home-card card"
@@ -39,7 +38,7 @@ export default function HomePage({ user, onLogout }) {
                   <h3 className="home-card-title">🗓️ 플래너</h3>
                 </div>
 
-                <p className="home-card-desc">주간 일정 + 날짜별 투두</p>
+                <p className="home-card-desc">주간 일정과 날짜별 투두 관리</p>
 
                 <div className="home-card-cta" aria-hidden="true">
                   들어가기
@@ -57,7 +56,7 @@ export default function HomePage({ user, onLogout }) {
                 </div>
 
                 <p className="home-card-desc">
-                  과목/강의실/교수 + 시험/과제 정리
+                  과목/시험/과제 정리
                 </p>
 
                 <div className="home-card-cta" aria-hidden="true">
