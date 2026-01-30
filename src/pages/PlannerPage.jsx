@@ -206,6 +206,7 @@ export default function PlannerPage({ user, onLogout }) {
         </div>
       </header>
 
+      
       <div className="main-layout">
         <aside className="left-panel">
           <CalendarPanel selectedDate={selectedDate} onChangeDate={handleChangeDate} />
