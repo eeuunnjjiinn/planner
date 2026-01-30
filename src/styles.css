@@ -451,8 +451,6 @@ body{
   color: #2563eb;
 }
 
-
-
 /* ===== Subjects (Timetable) ===== */
 .subjects-wrap{
   padding: 24px;
@@ -582,7 +580,6 @@ body{
 .tt-block { cursor: pointer; }
 .tt-block:hover { filter: brightness(0.98); transform: translateY(-1px); }
 
-
 /* 공통 폼 */
 .sp-field { display: grid; gap: 6px; }
 .sp-label { font-size: 13px; color: #64748b; }
@@ -604,3 +601,37 @@ body{
 .sp-color-preview { display: flex; gap: 10px; align-items: center; }
 .sp-color-chip { width: 18px; height: 18px; border-radius: 6px; border: 1px solid #e2e8f0; }
 .sp-color-text { font-size: 12px; color: #64748b; }
+
+/* 시간 범위 선택(TimeRangePicker) */
+.trp { display: grid; gap: 10px; }
+.trp-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.trp-col { display: grid; gap: 6px; }
+.trp-label { font-size: 12px; color: #64748b; }
+.trp-select {
+  height: 42px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0 12px;
+  background: #fff;
+  font-weight: 700;
+}
+.trp-quicks { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.trp-quick {
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  color: #111827;
+}
+.trp-quick:hover { background: #f8fafc; }
+.trp-hint { margin-left: auto; font-size: 12px; color: #64748b; }
+.trp-hint.is-bad { color: #ef4444; font-weight: 800; }
+
+@media (max-width: 520px) {
+  .trp-row { grid-template-columns: 1fr; }
+  .trp-hint { width: 100%; margin-left: 0; }
+}

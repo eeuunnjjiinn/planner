@@ -26,6 +26,114 @@ const COLOR_PRESETS = [
   "#111827", "#a3a3a3",
 ];
 
+const DEFAULT_SUBJECT_COLOR = "#2563eb";
+
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+
+function minToTime(m) {
+  const hh = Math.floor(m / 60);
+  const mm = m % 60;
+  return `${pad2(hh)}:${pad2(mm)}`;
+}
+
+function buildTimeOptions({ startHour = START_HOUR, endHour = END_HOUR, stepMin = 10 }) {
+  const out = [];
+  for (let m = startHour * 60; m <= endHour * 60; m += stepMin) out.push(minToTime(m));
+  return out;
+}
+
+function TimeRangePicker({ start, end, onStartChange, onEndChange }) {
+  const options = useMemo(() => buildTimeOptions({ stepMin: 10 }), []);
+  const startMin = timeToMin(start);
+  const endMin = timeToMin(end);
+
+  const quicks = [
+    { label: "+1시간", add: 60 },
+    { label: "+1시간 30분", add: 90 },
+    { label: "+2시간", add: 120 },
+  ];
+
+  return (
+    <div className="trp">
+      <div className="trp-row">
+        <div className="trp-col">
+          <div className="trp-label">시작</div>
+          <select
+            className="trp-select"
+            value={start}
+            onChange={(e) => {
+              const nextStart = e.target.value;
+              onStartChange(nextStart);
+
+              // ✅ 시작 시간을 바꾸면, 끝 시간이 시작보다 빠를 경우 자동 보정(최소 +10분)
+              const ns = timeToMin(nextStart);
+              const ne = timeToMin(end);
+              if (!Number.isNaN(ns) && !Number.isNaN(ne) && ne <= ns) {
+                const fixed = minToTime(clamp(ns + 10, START_HOUR * 60, END_HOUR * 60));
+                onEndChange(fixed);
+              }
+            }}
+          >
+            {options.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="trp-col">
+          <div className="trp-label">끝</div>
+          <select
+            className="trp-select"
+            value={end}
+            onChange={(e) => onEndChange(e.target.value)}
+          >
+            {options.map((t) => (
+              <option
+                key={t}
+                value={t}
+                disabled={!Number.isNaN(startMin) && timeToMin(t) <= startMin}
+              >
+                {t}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="trp-quicks" role="group" aria-label="빠른 시간 설정">
+        {quicks.map((q) => (
+          <button
+            key={q.label}
+            type="button"
+            className="trp-quick"
+            onClick={() => {
+              const ns = timeToMin(start);
+              if (Number.isNaN(ns)) return;
+              const next = clamp(ns + q.add, START_HOUR * 60, END_HOUR * 60);
+              const nextTime = minToTime(next);
+              onEndChange(nextTime);
+            }}
+          >
+            {q.label}
+          </button>
+        ))}
+
+        <div className={`trp-hint ${endMin <= startMin ? "is-bad" : ""}`}>
+          {Number.isNaN(startMin) || Number.isNaN(endMin)
+            ? ""
+            : endMin <= startMin
+              ? "끝나는 시간이 시작보다 늦어야 해요"
+              : `${start} ~ ${end}`}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ColorPicker({ value, onChange }) {
   return (
     <div className="sp-color">
@@ -56,7 +164,6 @@ function ColorPicker({ value, onChange }) {
     </div>
   );
 }
-
 
 function timeToMin(t) {
   if (!t) return NaN;
@@ -112,6 +219,7 @@ export default function SubjectsPage({ user, onLogout }) {
   const [dayKorean, setDayKorean] = useState("월");
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("10:15");
+  const [color, setColor] = useState(DEFAULT_SUBJECT_COLOR);
 
   // edit form
   const [eName, setEName] = useState("");
@@ -120,6 +228,7 @@ export default function SubjectsPage({ user, onLogout }) {
   const [eDayKorean, setEDayKorean] = useState("월");
   const [eStartTime, setEStartTime] = useState("09:00");
   const [eEndTime, setEEndTime] = useState("10:15");
+  const [eColor, setEColor] = useState(DEFAULT_SUBJECT_COLOR);
 
   useEffect(() => {
     if (!uid) return;
@@ -171,6 +280,7 @@ export default function SubjectsPage({ user, onLogout }) {
     setEDayKorean(DAY_LABEL[subject?.day] ?? "월");
     setEStartTime(subject?.startTime ?? "09:00");
     setEEndTime(subject?.endTime ?? "10:15");
+    setEColor(subject?.color ?? DEFAULT_SUBJECT_COLOR);
     setIsEditOpen(true);
   }
 
@@ -208,6 +318,7 @@ export default function SubjectsPage({ user, onLogout }) {
       day,
       startTime,
       endTime,
+      color: color || DEFAULT_SUBJECT_COLOR,
       createdAt: serverTimestamp(),
     });
 
@@ -217,6 +328,7 @@ export default function SubjectsPage({ user, onLogout }) {
     setDayKorean("월");
     setStartTime("09:00");
     setEndTime("10:15");
+    setColor(DEFAULT_SUBJECT_COLOR);
     setIsAddOpen(false);
   }
 
@@ -258,6 +370,7 @@ export default function SubjectsPage({ user, onLogout }) {
       day,
       startTime: eStartTime,
       endTime: eEndTime,
+      color: eColor || DEFAULT_SUBJECT_COLOR,
     });
 
     setIsEditOpen(false);
@@ -361,7 +474,11 @@ export default function SubjectsPage({ user, onLogout }) {
                         <div
                           key={b.id}
                           className="tt-block"
-                          style={{ top: `${b.top}%`, height: `${b.height}%` }}
+                          style={{
+                            top: `${b.top}%`,
+                            height: `${b.height}%`,
+                            background: b.color || DEFAULT_SUBJECT_COLOR,
+                          }}
                           title="클릭해서 수정/삭제"
                           role="button"
                           tabIndex={0}
@@ -432,27 +549,22 @@ export default function SubjectsPage({ user, onLogout }) {
                     ))}
                   </select>
                 </div>
-
-                <div style={{ flex: 1 }}>
-                  <label className="modal-label">시작</label>
-                  <input
-                    className="modal-input"
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                  />
-                </div>
-
-                <div style={{ flex: 1 }}>
-                  <label className="modal-label">끝</label>
-                  <input
-                    className="modal-input"
-                    type="time"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                  />
-                </div>
               </div>
+
+              <label className="modal-label" style={{ marginTop: 12 }}>
+                시간
+              </label>
+              <TimeRangePicker
+                start={startTime}
+                end={endTime}
+                onStartChange={setStartTime}
+                onEndChange={setEndTime}
+              />
+
+              <label className="modal-label" style={{ marginTop: 12 }}>
+                색상
+              </label>
+              <ColorPicker value={color} onChange={setColor} />
 
               <div className="modal-actions">
                 <button
@@ -515,27 +627,22 @@ export default function SubjectsPage({ user, onLogout }) {
                     ))}
                   </select>
                 </div>
-
-                <div style={{ flex: 1 }}>
-                  <label className="modal-label">시작</label>
-                  <input
-                    className="modal-input"
-                    type="time"
-                    value={eStartTime}
-                    onChange={(e) => setEStartTime(e.target.value)}
-                  />
-                </div>
-
-                <div style={{ flex: 1 }}>
-                  <label className="modal-label">끝</label>
-                  <input
-                    className="modal-input"
-                    type="time"
-                    value={eEndTime}
-                    onChange={(e) => setEEndTime(e.target.value)}
-                  />
-                </div>
               </div>
+
+              <label className="modal-label" style={{ marginTop: 12 }}>
+                시간
+              </label>
+              <TimeRangePicker
+                start={eStartTime}
+                end={eEndTime}
+                onStartChange={setEStartTime}
+                onEndChange={setEEndTime}
+              />
+
+              <label className="modal-label" style={{ marginTop: 12 }}>
+                색상
+              </label>
+              <ColorPicker value={eColor} onChange={setEColor} />
 
               <div
                 className="modal-actions"
