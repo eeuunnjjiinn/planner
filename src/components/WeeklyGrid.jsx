@@ -8,9 +8,15 @@ function formatHour(h) {
   return `${h - 12}PM`;
 }
 
+function typeBadge(type) {
+  return type === "exam" ? "EXAM" : "ASG";
+}
+
 export default function WeeklyGrid({
   weekDays,
   events = [],
+  assessments = [],
+  onSelectAssessmentDate,
   onAddEvent,
   onDeleteEvent,
   onPrevWeek,
@@ -24,16 +30,17 @@ export default function WeeklyGrid({
     return `${format(weekDays[0], "MM-dd")} ~ ${format(weekDays[6], "MM-dd")}`;
   }, [weekDays]);
 
-  // ✅ CSS의 .cell height(60px)와 반드시 맞춰야 함
   const CELL_H = 60;
   const EVENT_TOP_GAP = 6;
   const EVENT_BOTTOM_GAP = 6;
 
-  // 특정 (dateKey, hour)에 들어갈 이벤트만 뽑기
   const getCellEvents = (dateKey, hour) =>
     events.filter((e) => e.dateKey === dateKey && e.startHour === hour);
 
-  // ✅ 모달 상태
+  const getDayAssessments = (dateKey) =>
+    assessments.filter((a) => String(a.dateKey) === String(dateKey));
+
+  // 모달(기존 일정 추가)
   const [open, setOpen] = useState(false);
   const [target, setTarget] = useState(null); // { dateKey, startHour }
   const [title, setTitle] = useState("");
@@ -82,7 +89,6 @@ export default function WeeklyGrid({
       <div className="weekly-header">
         <div className="weekly-range">{rangeText}</div>
 
-        {/* ✅ 주간 이동 버튼 */}
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button className="btn" type="button" onClick={onPrevWeek}>
             ← 이전 주
@@ -94,18 +100,63 @@ export default function WeeklyGrid({
       </div>
 
       <div className="weekly-grid">
-        {/* ===== 헤더 1행 ===== */}
+        {/* 헤더 */}
         <div className="time-col header-time" />
-        {weekDays.map((d, idx) => (
-          <div className="day-col header-cell" key={d.toISOString()}>
-            <div className="header-inner">
-              <div className="dow">{weekLabels[idx]}</div>
-              <div className="date">{format(d, "d")}</div>
-            </div>
-          </div>
-        ))}
+        {weekDays.map((d, idx) => {
+          const dateKey = format(d, "yyyy-MM-dd");
+          const dayItems = getDayAssessments(dateKey);
+          const visible = dayItems.slice(0, 3);
+          const more = Math.max(0, dayItems.length - visible.length);
 
-        {/* ===== 시간 행들 ===== */}
+          return (
+            <div className="day-col header-cell" key={d.toISOString()}>
+              <div className="header-inner">
+                <div className="dow">{weekLabels[idx]}</div>
+                <div className="date">{format(d, "d")}</div>
+
+                {/* ✅ 시험/과제 배지 */}
+                {dayItems.length > 0 && (
+                  <div className="wk-badges">
+                    {visible.map((a) => (
+                      <button
+                        key={a.id}
+                        type="button"
+                        className="wk-badge"
+                        style={{ background: a.color || "#111827" }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (typeof onSelectAssessmentDate === "function") {
+                            onSelectAssessmentDate(dateKey);
+                          }
+                        }}
+                        title={`${typeBadge(a.type)} · ${a.title}`}
+                      >
+                        {typeBadge(a.type)}
+                      </button>
+                    ))}
+                    {more > 0 && (
+                      <button
+                        type="button"
+                        className="wk-badge more"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (typeof onSelectAssessmentDate === "function") {
+                            onSelectAssessmentDate(dateKey);
+                          }
+                        }}
+                        title="더 보기"
+                      >
+                        +{more}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* 시간 행 */}
         {hours.map((h) => (
           <React.Fragment key={h}>
             <div className="time-col">{formatHour(h)}</div>
@@ -125,9 +176,7 @@ export default function WeeklyGrid({
                     const dur = Math.max(1, Number(ev.duration || 1));
                     const endHour = ev.startHour + dur;
 
-                    // ✅ 칸(60px) 기준으로 정확히 맞춤
-                    const heightPx =
-                      dur * CELL_H - (EVENT_TOP_GAP + EVENT_BOTTOM_GAP);
+                    const heightPx = dur * CELL_H - (EVENT_TOP_GAP + EVENT_BOTTOM_GAP);
 
                     return (
                       <div
@@ -140,9 +189,7 @@ export default function WeeklyGrid({
                         title="클릭하면 삭제"
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (typeof onDeleteEvent === "function") {
-                            onDeleteEvent(ev.id);
-                          }
+                          if (typeof onDeleteEvent === "function") onDeleteEvent(ev.id);
                         }}
                       >
                         <div className="event-pill-title">{ev.title}</div>
@@ -159,7 +206,7 @@ export default function WeeklyGrid({
         ))}
       </div>
 
-      {/* ✅ 중앙 모달 */}
+      {/* 일정 추가 모달 */}
       {open && (
         <div className="modal-overlay" onClick={closeModal}>
           <div
