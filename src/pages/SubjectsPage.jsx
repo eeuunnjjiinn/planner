@@ -12,7 +12,6 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { db } from "../firebase";
-import { useLocation } from "react-router-dom";
 
 const DAYS = ["월", "화", "수", "목", "금"];
 const DAY_VALUE = { 월: 1, 화: 2, 수: 3, 목: 4, 금: 5 };
@@ -28,11 +27,6 @@ const COLOR_PRESETS = [
 ];
 
 const DEFAULT_SUBJECT_COLOR = "#2563eb";
-
-const [isShareOpen, setIsShareOpen] = useState(false);
-const [shareCreating, setShareCreating] = useState(false);
-const [shareLink, setShareLink] = useState("");
-const [shareTitle, setShareTitle] = useState("내 시간표");
 
 function pad2(n) {
   return String(n).padStart(2, "0");
@@ -235,6 +229,11 @@ export default function SubjectsPage({ user, onLogout }) {
   const [eStartTime, setEStartTime] = useState("09:00");
   const [eEndTime, setEEndTime] = useState("10:15");
   const [eColor, setEColor] = useState(DEFAULT_SUBJECT_COLOR);
+
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [shareCreating, setShareCreating] = useState(false);
+  const [shareLink, setShareLink] = useState("");
+  const [shareTitle, setShareTitle] = useState("내 시간표");
 
   useEffect(() => {
     if (!uid) return;
