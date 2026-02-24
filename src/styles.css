@@ -977,3 +977,216 @@ body{ background: var(--bg); color: var(--text); }
 .sp-search{
   margin-bottom: 25px; /* 검색 카드 아래 간격 */
 }
+
+/* =========================
+   Dark mode variables
+   ========================= */
+:root{
+  --bg: #f5f7fb;
+  --card: #ffffff;
+  --text: #111827;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --input: #ffffff;
+  --shadow: 0 10px 30px rgba(0,0,0,0.04);
+}
+
+html.dark{
+  --bg: #0b1220;
+  --card: #0f172a;
+  --text: #e5e7eb;
+  --muted: #94a3b8;
+  --border: rgba(148,163,184,0.18);
+  --input: rgba(15,23,42,0.8);
+  --shadow: 0 14px 38px rgba(0,0,0,0.35);
+}
+
+/* =========================
+   Apply variables
+   (이게 핵심: 기존 body 배경을 덮어씀)
+   ========================= */
+html, body{
+  background: var(--bg) !important;
+  color: var(--text) !important;
+}
+
+.card{
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+  box-shadow: var(--shadow) !important;
+}
+
+.btn{
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+.input, .todo-text-input{
+  background: var(--input) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+.subtitle, .label, .hint, .weekly-sub{
+  color: var(--muted) !important;
+}
+
+.topbar{
+  background: color-mix(in srgb, var(--bg) 86%, transparent) !important;
+  border-bottom-color: var(--border) !important;
+}
+
+/* =========================
+   Dark mode: Weekly grid
+   ========================= */
+html.dark .weekly{
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+  box-shadow: var(--shadow) !important;
+}
+
+html.dark .weekly-range{
+  color: var(--text) !important;
+}
+
+html.dark .weekly-sub{
+  color: var(--muted) !important;
+}
+
+/* 그리드 전체 테두리/배경 */
+html.dark .weekly-grid{
+  border-top-color: var(--border) !important;
+  border-left-color: var(--border) !important;
+  background: var(--card) !important;
+}
+
+/* 헤더 셀(요일/날짜) */
+html.dark .header-cell{
+  background: color-mix(in srgb, var(--card) 78%, var(--bg)) !important;
+  color: var(--text) !important;
+}
+
+html.dark .header-inner .dow{
+  color: var(--muted) !important;
+}
+html.dark .header-inner .date{
+  color: var(--text) !important;
+}
+
+/* 시간 컬럼/일반 셀 */
+html.dark .time-col,
+html.dark .day-col{
+  color: var(--muted) !important;
+  border-right-color: var(--border) !important;
+  border-bottom-color: var(--border) !important;
+}
+
+/* 셀 배경(하얀 줄 느낌 제거) */
+html.dark .cell{
+  background: transparent !important;
+}
+
+/* 모달(일정 추가창)도 같이 다크 */
+html.dark .modal-card{
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+html.dark .modal-title{ color: var(--text) !important; }
+html.dark .modal-sub,
+html.dark .modal-label{ color: var(--muted) !important; }
+html.dark .modal-input,
+html.dark .modal-color{
+  background: var(--input) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+/* =========================
+   Dark mode: React Calendar
+   ========================= */
+html.dark .calendar-wrap{
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+  box-shadow: var(--shadow) !important;
+}
+
+html.dark .react-calendar{
+  background: transparent !important;
+  color: var(--text) !important;
+}
+
+html.dark .react-calendar__navigation button{
+  color: var(--text) !important;
+  background: transparent !important;
+}
+
+html.dark .react-calendar__month-view__weekdays{
+  color: var(--muted) !important;
+}
+
+html.dark .react-calendar__tile{
+  background: transparent !important;
+  color: var(--text) !important;
+  border-radius: 10px;
+}
+
+html.dark .react-calendar__tile:enabled:hover{
+  background: rgba(148,163,184,0.14) !important;
+}
+
+html.dark .react-calendar__tile--now{
+  background: rgba(37,99,235,0.18) !important;
+}
+
+html.dark .react-calendar__tile--active{
+  background: #2563eb !important;
+  color: #fff !important;
+}
+
+html.dark .react-calendar__month-view__days__day--weekend{
+  color: #f87171 !important; /* 주말 빨강 유지 */
+}
+
+/* =========================
+   Dark mode: Subjects Timetable
+   ========================= */
+html.dark .subjects-wrap{
+  color: var(--text) !important;
+}
+
+html.dark .subjects-sub{
+  color: var(--muted) !important;
+}
+
+/* 시간표 전체 카드(너 코드에서 timetable이 card처럼 쓰임) */
+html.dark .timetable{
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow) !important;
+}
+
+/* 헤더 셀(월화수목금 / 시간) */
+html.dark .tt-cell{
+  background: color-mix(in srgb, var(--card) 78%, var(--bg)) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+html.dark .tt-time{
+  background: transparent !important;
+  border-color: var(--border) !important;
+  color: var(--muted) !important;
+}
+
+/* 요일 컬럼(흰 박스들) */
+html.dark .tt-day-col{
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+}
+
+/* 안쪽 슬롯 선 */
+html.dark .tt-slot{
+  border-bottom-color: rgba(148,163,184,0.16) !important;
+}
