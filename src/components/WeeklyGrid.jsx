@@ -338,9 +338,6 @@ export default function WeeklyGrid({
         </div>
 
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <button className="btn" type="button" onClick={() => setCopyOpen(true)}>
-            이번 주 복사
-          </button>
           <button className="btn" type="button" onClick={onPrevWeek}>
             ← 이전 주
           </button>
