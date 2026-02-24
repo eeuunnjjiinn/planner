@@ -12,6 +12,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { db } from "../firebase";
+import { useLocation } from "react-router-dom";
 
 const DAYS = ["월", "화", "수", "목", "금"];
 const DAY_VALUE = { 월: 1, 화: 2, 수: 3, 목: 4, 금: 5 };
@@ -27,6 +28,11 @@ const COLOR_PRESETS = [
 ];
 
 const DEFAULT_SUBJECT_COLOR = "#2563eb";
+
+const [isShareOpen, setIsShareOpen] = useState(false);
+const [shareCreating, setShareCreating] = useState(false);
+const [shareLink, setShareLink] = useState("");
+const [shareTitle, setShareTitle] = useState("내 시간표");
 
 function pad2(n) {
   return String(n).padStart(2, "0");
@@ -388,6 +394,54 @@ export default function SubjectsPage({ user, onLogout }) {
     setEditing(null);
   }
 
+  async function createShareLink() {
+  if (!uid) return;
+  if (!subjects || subjects.length === 0) {
+    alert("공유할 과목이 없어요. 먼저 과목을 추가해 주세요.");
+    return;
+  }
+
+  try {
+    setShareCreating(true);
+
+    // 시간표 스냅샷(배열)로 저장
+    const payloadSubjects = subjects.map((s) => ({
+      name: s.name || "",
+      professor: s.professor || "",
+      place: s.place || "",
+      day: s.day,
+      startTime: s.startTime || "",
+      endTime: s.endTime || "",
+      color: s.color || DEFAULT_SUBJECT_COLOR,
+    }));
+
+    const ref = await addDoc(collection(db, "publicShares"), {
+      ownerUid: uid,
+      ownerEmail: user?.email || "",
+      title: (shareTitle || "내 시간표").trim(),
+      subjects: payloadSubjects,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+
+    const link = `${window.location.origin}/share/${ref.id}`;
+    setShareLink(link);
+
+    // 바로 복사까지
+    try {
+      await navigator.clipboard.writeText(link);
+      alert("공유 링크를 만들었어요! 링크를 복사했어요.");
+    } catch {
+      alert("공유 링크를 만들었어요! 아래 링크를 복사해서 친구에게 보내세요.");
+    }
+  } catch (e) {
+    console.error(e);
+    alert("공유 링크 생성에 실패했어요. 다시 시도해 주세요.");
+  } finally {
+    setShareCreating(false);
+  }
+}
+
   if (!user) {
     return (
       <div className="page main-page" style={{ padding: 24 }}>
@@ -437,6 +491,9 @@ export default function SubjectsPage({ user, onLogout }) {
           <div style={{ display: "flex", gap: 10 }}>
             <button className="btn primary" onClick={() => setIsAddOpen(true)}>
               + 과목 추가
+            </button>
+            <button className="btn" onClick={() => { setIsShareOpen(true); setShareLink(""); }}>
+              시간표 공유
             </button>
           </div>
         </div>
@@ -669,6 +726,66 @@ export default function SubjectsPage({ user, onLogout }) {
           </div>
         </div>
       )}
+
+      {isShareOpen && (
+  <div className="modal-overlay" onClick={() => setIsShareOpen(false)}>
+    <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-title">시간표 공유</div>
+      <div className="modal-sub">
+        링크를 친구에게 보내면 친구가 읽기 전용으로 시간표를 볼 수 있어요.
+      </div>
+
+      <label className="modal-label">공유 제목(선택)</label>
+      <input
+        className="modal-input"
+        value={shareTitle}
+        onChange={(e) => setShareTitle(e.target.value)}
+        placeholder="예) 1학기 시간표"
+      />
+
+      <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+        <button
+          className="btn primary"
+          type="button"
+          onClick={createShareLink}
+          disabled={shareCreating}
+        >
+          {shareCreating ? "생성 중..." : "공유 링크 만들기"}
+        </button>
+        <button className="btn" type="button" onClick={() => setIsShareOpen(false)}>
+          닫기
+        </button>
+      </div>
+
+      {shareLink && (
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontWeight: 700, marginBottom: 6 }}>공유 링크</div>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <code style={{ padding: "6px 8px", background: "#f3f4f6", borderRadius: 8 }}>
+              {shareLink}
+            </code>
+            <button
+              className="btn"
+              type="button"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(shareLink);
+                  alert("링크를 복사했어요!");
+                } catch {
+                  alert("복사에 실패했어요. 직접 복사해 주세요.");
+                }
+              }}
+            >
+              링크 복사
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+)}
     </div>
   );
 }
+
+
