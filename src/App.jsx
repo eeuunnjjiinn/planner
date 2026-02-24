@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
-import LoginPage from "./pages/LoginPage.jsx";
-import HomePage from "./pages/HomePage.jsx";
-import PlannerPage from "./pages/PlannerPage.jsx";
-import SubjectsPage from "./pages/SubjectsPage.jsx";
+import LoginPage from "./LoginPage.jsx";
+import HomePage from "./HomePage.jsx";
+import PlannerPage from "./PlannerPage.jsx";
+import SubjectsPage from "./SubjectsPage.jsx";
+
+// ✅ SharePage는 pages 폴더에 있으니 경로 수정
 import SharePage from "./pages/SharePage.jsx";
 
 import { auth } from "./firebase";
@@ -40,16 +42,16 @@ export default function App() {
 
   return (
     <Routes>
-      {/* 로그인 */}
       <Route
         path="/login"
         element={user ? <Navigate to="/home" replace /> : <LoginPage />}
       />
 
-      {/* 기본 */}
-      <Route path="/" element={<Navigate to={user ? "/home" : "/login"} replace />} />
+      <Route
+        path="/"
+        element={<Navigate to={user ? "/home" : "/login"} replace />}
+      />
 
-      {/* 홈 */}
       <Route
         path="/home"
         element={
@@ -59,7 +61,6 @@ export default function App() {
         }
       />
 
-      {/* 플래너 */}
       <Route
         path="/planner"
         element={
@@ -69,7 +70,6 @@ export default function App() {
         }
       />
 
-      {/* 과목/시간표 */}
       <Route
         path="/subjects"
         element={
@@ -79,11 +79,13 @@ export default function App() {
         }
       />
 
-      {/* ✅ 공유된 시간표 보기(로그인 없이도 볼 수 있게 공개) */}
+      {/* ✅ 공유 시간표: 로그인 없이도 접근 가능 */}
       <Route path="/share/:shareId" element={<SharePage user={user} />} />
 
-      {/* 없는 경로 */}
-      <Route path="*" element={<Navigate to={user ? "/home" : "/login"} replace />} />
+      <Route
+        path="*"
+        element={<Navigate to={user ? "/home" : "/login"} replace />}
+      />
     </Routes>
   );
 }
