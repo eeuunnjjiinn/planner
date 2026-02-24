@@ -1,6 +1,7 @@
 import React, { useMemo, useEffect, useState } from "react";
-import { startOfWeek, addDays, format, parseISO } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import {
+  startOfWeek, addDays, addMonths, addYears, format, parseISO, isAfter} from "date-fns";
 
 import CalendarPanel from "../components/CalendarPanel.jsx";
 import WeeklyGrid from "../components/WeeklyGrid.jsx";
@@ -14,6 +15,7 @@ import {
   where,
   onSnapshot,
   addDoc,
+  updateDoc,
   deleteDoc,
   doc,
   serverTimestamp,
@@ -161,21 +163,87 @@ export default function PlannerPage({ user, onLogout }) {
     }
   };
 
-  const handleAddEvent = async ({ dateKey, startHour, title, duration, color }) => {
-    if (!uid) return alert("로그인이 필요합니다.");
+  // ✅ 일정 추가 + 반복(미리 생성)
+  const handleAddEvent = async ({
+  dateKey,
+  startHour,
+  title,
+  duration,
+  color,
+  repeat = "none",
+  repeatUntil = "",   // ✅ 추가
+}) => {
+  if (!uid) return alert("로그인이 필요합니다.");
 
-    try {
-      await addDoc(collection(db, "users", uid, "events"), {
+  try {
+    const colRef = collection(db, "users", uid, "events");
+    const seriesId = repeat === "none" ? null : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+    const buildRepeatDates = (baseKey, rule, untilKey) => {
+      if (!rule || rule === "none") return [baseKey];
+      const base = parseISO(String(baseKey));
+      if (isNaN(base.getTime())) return [baseKey];
+
+      let untilDate = null;
+      if (untilKey) {
+        const u = parseISO(String(untilKey));
+        if (!isNaN(u.getTime())) untilDate = u;
+      }
+
+      if (!untilDate) {
+        if (rule === "weekly") untilDate = addMonths(base, 3);
+        else if (rule === "monthly") untilDate = addMonths(base, 6);
+        else if (rule === "yearly") untilDate = addYears(base, 2);
+      }
+
+      const keys = [];
+      let cur = base;
+      while (!isAfter(cur, untilDate)) {
+        keys.push(format(cur, "yyyy-MM-dd"));
+        if (rule === "weekly") cur = addDays(cur, 7);
+        else if (rule === "monthly") cur = addMonths(cur, 1);
+        else if (rule === "yearly") cur = addYears(cur, 1);
+        else break;
+        if (keys.length > 120) break;
+      }
+      return keys.length ? keys : [baseKey];
+    };
+
+    const dateKeys = buildRepeatDates(dateKey, repeat, repeatUntil);
+
+    for (let i = 0; i < dateKeys.length; i++) {
+      await addDoc(colRef, {
         title,
-        dateKey,
+        dateKey: dateKeys[i],
         startHour,
         duration,
         color,
+        seriesId,
+        repeat: repeat,
+        repeatIndex: i,
+        repeatUntil: repeatUntil || "",
         createdAt: serverTimestamp(),
       });
+    }
+  } catch (e) {
+    console.error("ADD EVENT ERROR =", e);
+    alert(`일정 추가 실패: ${e?.code || ""} ${e?.message || e}`);
+  }
+};
+
+  // ✅ 이동/시간조절(업데이트)
+  const handleUpdateEvent = async (eventId, patch) => {
+    if (!uid) return;
+    if (!eventId) return;
+
+    try {
+      await updateDoc(doc(db, "users", uid, "events", eventId), {
+        ...patch,
+        updatedAt: serverTimestamp(),
+      });
     } catch (e) {
-      console.error("ADD EVENT ERROR =", e);
-      alert(`일정 추가 실패: ${e?.code || ""} ${e?.message || e}`);
+      console.error("UPDATE EVENT ERROR =", e);
+      alert(`일정 수정 실패: ${e?.code || ""} ${e?.message || e}`);
     }
   };
 
@@ -193,6 +261,38 @@ export default function PlannerPage({ user, onLogout }) {
     }
   };
 
+  // ✅ 이번 주 일정 복사
+  const handleCopyWeek = async ({ offsetWeeks = 1 } = {}) => {
+    if (!uid) return alert("로그인이 필요합니다.");
+    const offset = Math.max(1, Math.min(8, Number(offsetWeeks || 1)));
+    const ok = confirm(`이번 주 일정을 ${offset}주 뒤로 복사할까요?`);
+    if (!ok) return;
+
+    try {
+      const colRef = collection(db, "users", uid, "events");
+
+      for (const ev of events) {
+        const base = parseISO(String(ev.dateKey));
+        const copied = addDays(base, 7 * offset);
+
+        await addDoc(colRef, {
+          title: ev.title,
+          dateKey: format(copied, "yyyy-MM-dd"),
+          startHour: Number(ev.startHour || 0),
+          duration: Number(ev.duration || 1),
+          color: ev.color || "#2563eb",
+          copiedFrom: ev.id,
+          createdAt: serverTimestamp(),
+        });
+      }
+
+      alert("복사 완료!");
+    } catch (e) {
+      console.error("COPY WEEK ERROR =", e);
+      alert(`복사 실패: ${e?.code || ""} ${e?.message || e}`);
+    }
+  };
+
   return (
     <div className="page main-page">
       <header className="topbar">
@@ -201,12 +301,15 @@ export default function PlannerPage({ user, onLogout }) {
         </div>
 
         <div style={{ display: "flex", gap: 8 }}>
-          <button className="btn" onClick={() => nav("/subjects")}>과목 관리</button>
-          <button className="btn" onClick={onLogout}>로그아웃</button>
+          <button className="btn" onClick={() => nav("/subjects")}>
+            과목 관리
+          </button>
+          <button className="btn" onClick={onLogout}>
+            로그아웃
+          </button>
         </div>
       </header>
 
-      
       <div className="main-layout">
         <aside className="left-panel">
           <CalendarPanel selectedDate={selectedDate} onChangeDate={handleChangeDate} />
@@ -245,16 +348,14 @@ export default function PlannerPage({ user, onLogout }) {
               assessments={assessments}
               onSelectAssessmentDate={handleSelectAssessmentDate}
               onAddEvent={handleAddEvent}
+              onUpdateEvent={handleUpdateEvent}
               onDeleteEvent={handleDeleteEvent}
+              onCopyWeek={handleCopyWeek}
               onPrevWeek={goPrevWeek}
               onNextWeek={goNextWeek}
             />
           ) : (
-            <DailyTodoPanel
-              uid={uid}
-              selectedDate={selectedDate}
-              onBack={() => setRightMode("week")}
-            />
+            <DailyTodoPanel uid={uid} selectedDate={selectedDate} onBack={() => setRightMode("week")} />
           )}
         </section>
       </div>

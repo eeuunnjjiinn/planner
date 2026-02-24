@@ -809,3 +809,95 @@ body{
   font-size: 12px;
   color: #6b7280;
 }
+
+
+.weekly-sub{ margin-top: 4px; font-size: 12px; color: #6b7280; }
+
+.event-pill.is-ghost{ opacity: 0.55; pointer-events: none; }
+.event-pill-head{ display:flex; justify-content: space-between; align-items:center; gap: 10px; }
+
+.event-del{
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.35);
+  background: rgba(255,255,255,0.18);
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.event-del:hover{ background: rgba(255,255,255,0.28); }
+
+.event-resize-handle{
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 8px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.35);
+  cursor: ns-resize;
+}
+
+.cell.is-selecting{
+  outline: 2px solid rgba(59,130,246,0.35);
+  outline-offset: -2px;
+  background: rgba(59,130,246,0.08);
+}
+
+/* ✅ event pill: 텍스트 잘림 방지 + compact 모드 */
+.event-pill{
+  position: relative;
+  padding: 10px 10px 18px;
+  border-radius: 14px;
+  color: #fff;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.event-pill.is-compact{
+  padding: 10px 10px 14px;
+  gap: 4px;
+}
+
+.event-pill-title{
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.event-pill-time{
+  font-size: 12px;
+  line-height: 1.2;
+  opacity: 0.92;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.event-del{
+  flex: 0 0 auto;
+}
+
+/* 🔥 셀 기준점 설정 */
+.cell {
+  position: relative;
+  padding: 0 !important;
+  align-items: stretch !important;
+}
+
+/* 🔥 이벤트는 셀의 맨 위부터 시작 */
+.event-pill {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  top: 0;
+  border-radius: 14px;
+  z-index: 2;
+}

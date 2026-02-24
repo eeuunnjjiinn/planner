@@ -5,7 +5,6 @@ import LoginPage from "./pages/LoginPage.jsx";
 import HomePage from "./pages/HomePage.jsx";
 import PlannerPage from "./pages/PlannerPage.jsx";
 import SubjectsPage from "./pages/SubjectsPage.jsx";
-import SharePage from "./pages/SharePage.jsx";
 
 import { auth } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
@@ -76,9 +75,6 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-
-      {/* 공유 시간표 보기: 로그인 없이도 접근 가능 */}
-      <Route path="/share/:shareId" element={<SharePage user={user} />} />
 
       <Route
         path="*"
