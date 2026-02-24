@@ -20,6 +20,14 @@ export default function DailyTodoPanel({ uid, selectedDate, onBack }) {
   const [input, setInput] = useState("");
   const [todos, setTodos] = useState([]);
 
+  // ✅ 완료율
+  const { total, doneCount, percent } = useMemo(() => {
+    const total = todos.length;
+    const doneCount = todos.filter((t) => !!t.done).length;
+    const percent = total === 0 ? 0 : Math.round((doneCount / total) * 100);
+    return { total, doneCount, percent };
+  }, [todos]);
+
   // ✅ (1) 해당 유저 + 해당 날짜 투두 실시간 불러오기
   useEffect(() => {
     if (!uid) {
@@ -34,7 +42,6 @@ export default function DailyTodoPanel({ uid, selectedDate, onBack }) {
       q,
       (snap) => {
         const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        // 최신순 정렬(서버타임스탬프 null 이슈 회피용으로 프론트에서 정렬)
         list.sort((a, b) => {
           const at = a.createdAt?.seconds ?? 0;
           const bt = b.createdAt?.seconds ?? 0;
@@ -105,11 +112,23 @@ export default function DailyTodoPanel({ uid, selectedDate, onBack }) {
   return (
     <div className="todo-panel">
       <div className="todo-header">
-        <button className="btn" onClick={onBack}>
-          ← 주간 보기
-        </button>
-        <div className="todo-title">
-          {format(selectedDate, "yyyy년 M월 d일")} 투두리스트
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button className="btn" onClick={onBack}>
+            ← 주간 보기
+          </button>
+          <div className="todo-title">{format(selectedDate, "yyyy년 M월 d일")} 투두리스트</div>
+        </div>
+
+        <div className="todo-progress" title="완료율">
+          <div className="todo-progress-top">
+            <span className="todo-progress-percent">{percent}%</span>
+            <span className="todo-progress-count">
+              {doneCount}/{total}
+            </span>
+          </div>
+          <div className="todo-progress-bar">
+            <div className="todo-progress-fill" style={{ width: `${percent}%` }} />
+          </div>
         </div>
       </div>
 

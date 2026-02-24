@@ -1,12 +1,14 @@
 import React, { useMemo, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  startOfWeek, addDays, addMonths, addYears, format, parseISO, isAfter} from "date-fns";
+import { startOfWeek, addDays, addMonths, addYears, format, parseISO, isAfter } from "date-fns";
 
 import CalendarPanel from "../components/CalendarPanel.jsx";
 import WeeklyGrid from "../components/WeeklyGrid.jsx";
 import DailyTodoPanel from "../components/DailyTodoPanel.jsx";
 import AssessmentsPanel from "../components/AssessmentsPanel.jsx";
+import SearchPanel from "../components/SearchPanel.jsx";
+
+import { useTheme } from "../ThemeContext.jsx";
 
 import { db } from "../firebase";
 import {
@@ -24,6 +26,8 @@ import {
 export default function PlannerPage({ user, onLogout }) {
   const nav = useNavigate();
   const uid = user?.uid;
+
+  const { isDark, toggleTheme } = useTheme();
 
   const [selectedDate, setSelectedDate] = useState(new Date());
 
@@ -43,6 +47,9 @@ export default function PlannerPage({ user, onLogout }) {
 
   // ===== 주간 일정 =====
   const [events, setEvents] = useState([]);
+
+  // ===== 주간 투두(검색용) =====
+  const [weekTodos, setWeekTodos] = useState([]);
 
   useEffect(() => {
     if (!uid) {
@@ -68,6 +75,38 @@ export default function PlannerPage({ user, onLogout }) {
         setEvents(list);
       },
       (err) => console.error("EVENTS SNAPSHOT ERROR =", err)
+    );
+
+    return () => unsub();
+  }, [uid, weekStartKey, weekEndKey]);
+
+  // ✅ 이번 주 범위 투두(검색용)
+  useEffect(() => {
+    if (!uid) {
+      setWeekTodos([]);
+      return;
+    }
+
+    const colRef = collection(db, "users", uid, "todos");
+    const q = query(
+      colRef,
+      where("dateKey", ">=", weekStartKey),
+      where("dateKey", "<=", weekEndKey)
+    );
+
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        list.sort((a, b) => {
+          if (a.dateKey !== b.dateKey) return String(a.dateKey).localeCompare(String(b.dateKey));
+          const at = a.createdAt?.seconds ?? 0;
+          const bt = b.createdAt?.seconds ?? 0;
+          return bt - at;
+        });
+        setWeekTodos(list);
+      },
+      (err) => console.error("TODOS SNAPSHOT ERROR =", err)
     );
 
     return () => unsub();
@@ -163,73 +202,98 @@ export default function PlannerPage({ user, onLogout }) {
     }
   };
 
+  // ✅ 검색 결과 클릭 시 해당 날짜로 이동
+  const handlePickEventFromSearch = (ev) => {
+    if (!ev?.dateKey) return;
+    try {
+      const d = parseISO(String(ev.dateKey));
+      if (!isNaN(d.getTime())) {
+        setSelectedDate(d);
+        setRightMode("week");
+      }
+    } catch {}
+  };
+
+  const handlePickTodoFromSearch = (td) => {
+    if (!td?.dateKey) return;
+    try {
+      const d = parseISO(String(td.dateKey));
+      if (!isNaN(d.getTime())) {
+        setSelectedDate(d);
+        setRightMode("todo");
+        setLeftTab("todo");
+      }
+    } catch {}
+  };
+
   // ✅ 일정 추가 + 반복(미리 생성)
   const handleAddEvent = async ({
-  dateKey,
-  startHour,
-  title,
-  duration,
-  color,
-  repeat = "none",
-  repeatUntil = "",   // ✅ 추가
-}) => {
-  if (!uid) return alert("로그인이 필요합니다.");
+    dateKey,
+    startHour,
+    title,
+    duration,
+    color,
+    repeat = "none",
+    repeatUntil = "",
+  }) => {
+    if (!uid) return alert("로그인이 필요합니다.");
 
-  try {
-    const colRef = collection(db, "users", uid, "events");
-    const seriesId = repeat === "none" ? null : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    try {
+      const colRef = collection(db, "users", uid, "events");
+      const seriesId =
+        repeat === "none" ? null : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-    const buildRepeatDates = (baseKey, rule, untilKey) => {
-      if (!rule || rule === "none") return [baseKey];
-      const base = parseISO(String(baseKey));
-      if (isNaN(base.getTime())) return [baseKey];
+      const buildRepeatDates = (baseKey, rule, untilKey) => {
+        if (!rule || rule === "none") return [baseKey];
+        const base = parseISO(String(baseKey));
+        if (isNaN(base.getTime())) return [baseKey];
 
-      let untilDate = null;
-      if (untilKey) {
-        const u = parseISO(String(untilKey));
-        if (!isNaN(u.getTime())) untilDate = u;
+        let untilDate = null;
+        if (untilKey) {
+          const u = parseISO(String(untilKey));
+          if (!isNaN(u.getTime())) untilDate = u;
+        }
+
+        if (!untilDate) {
+          if (rule === "weekly") untilDate = addMonths(base, 3);
+          else if (rule === "monthly") untilDate = addMonths(base, 6);
+          else if (rule === "yearly") untilDate = addYears(base, 2);
+        }
+
+        const keys = [];
+        let cur = base;
+        while (!isAfter(cur, untilDate)) {
+          keys.push(format(cur, "yyyy-MM-dd"));
+          if (rule === "weekly") cur = addDays(cur, 7);
+          else if (rule === "monthly") cur = addMonths(cur, 1);
+          else if (rule === "yearly") cur = addYears(cur, 1);
+          else break;
+          if (keys.length > 120) break;
+        }
+        return keys.length ? keys : [baseKey];
+      };
+
+      const dateKeys = buildRepeatDates(dateKey, repeat, repeatUntil);
+
+      for (let i = 0; i < dateKeys.length; i++) {
+        await addDoc(colRef, {
+          title,
+          dateKey: dateKeys[i],
+          startHour,
+          duration,
+          color,
+          seriesId,
+          repeat,
+          repeatIndex: i,
+          repeatUntil: repeatUntil || "",
+          createdAt: serverTimestamp(),
+        });
       }
-
-      if (!untilDate) {
-        if (rule === "weekly") untilDate = addMonths(base, 3);
-        else if (rule === "monthly") untilDate = addMonths(base, 6);
-        else if (rule === "yearly") untilDate = addYears(base, 2);
-      }
-
-      const keys = [];
-      let cur = base;
-      while (!isAfter(cur, untilDate)) {
-        keys.push(format(cur, "yyyy-MM-dd"));
-        if (rule === "weekly") cur = addDays(cur, 7);
-        else if (rule === "monthly") cur = addMonths(cur, 1);
-        else if (rule === "yearly") cur = addYears(cur, 1);
-        else break;
-        if (keys.length > 120) break;
-      }
-      return keys.length ? keys : [baseKey];
-    };
-
-    const dateKeys = buildRepeatDates(dateKey, repeat, repeatUntil);
-
-    for (let i = 0; i < dateKeys.length; i++) {
-      await addDoc(colRef, {
-        title,
-        dateKey: dateKeys[i],
-        startHour,
-        duration,
-        color,
-        seriesId,
-        repeat: repeat,
-        repeatIndex: i,
-        repeatUntil: repeatUntil || "",
-        createdAt: serverTimestamp(),
-      });
+    } catch (e) {
+      console.error("ADD EVENT ERROR =", e);
+      alert(`일정 추가 실패: ${e?.code || ""} ${e?.message || e}`);
     }
-  } catch (e) {
-    console.error("ADD EVENT ERROR =", e);
-    alert(`일정 추가 실패: ${e?.code || ""} ${e?.message || e}`);
-  }
-};
+  };
 
   // ✅ 이동/시간조절(업데이트)
   const handleUpdateEvent = async (eventId, patch) => {
@@ -301,6 +365,9 @@ export default function PlannerPage({ user, onLogout }) {
         </div>
 
         <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn" onClick={toggleTheme} title="다크/라이트 전환">
+            {isDark ? "라이트" : "다크"}
+          </button>
           <button className="btn" onClick={() => nav("/subjects")}>
             과목 관리
           </button>
@@ -312,6 +379,13 @@ export default function PlannerPage({ user, onLogout }) {
 
       <div className="main-layout">
         <aside className="left-panel">
+          <SearchPanel
+            events={events}
+            todos={weekTodos}
+            onPickEvent={handlePickEventFromSearch}
+            onPickTodo={handlePickTodoFromSearch}
+          />
+
           <CalendarPanel selectedDate={selectedDate} onChangeDate={handleChangeDate} />
 
           <div className="lp-tabs" style={{ marginTop: 14 }}>

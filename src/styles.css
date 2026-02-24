@@ -901,3 +901,79 @@ body{
   border-radius: 14px;
   z-index: 2;
 }
+
+/* =========================
+   Dark mode overrides
+   ========================= */
+body{ background: var(--bg); color: var(--text); }
+
+.card{ background: var(--card); border-color: var(--border); }
+.btn{ background: var(--card); border-color: var(--border); color: var(--text); }
+.input, .todo-text-input{ background: var(--input); border-color: var(--border); color: var(--text); }
+.subtitle, .label, .hint{ color: var(--muted); }
+
+.topbar{ background: color-mix(in srgb, var(--bg) 86%, transparent); border-bottom-color: var(--border); }
+
+/* ===== Todo progress ===== */
+.todo-header{ display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.todo-progress{ width: 180px; display: grid; gap: 8px; }
+.todo-progress-top{ display: flex; justify-content: space-between; align-items: baseline; }
+.todo-progress-percent{ font-weight: 900; font-size: 16px; }
+.todo-progress-count{ font-size: 12px; color: var(--muted); font-weight: 800; }
+.todo-progress-bar{
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 70%, var(--bg));
+  overflow: hidden;
+}
+.todo-progress-fill{ height: 100%; border-radius: 999px; background: #2563eb; }
+
+/* ===== Search panel ===== */
+.sp-search-head{ display:flex; justify-content: space-between; align-items:flex-start; gap: 10px; }
+.sp-search-title{ font-size: 15px; font-weight: 900; }
+.sp-search-sub{ margin-top: 4px; font-size: 12px; color: var(--muted); font-weight: 700; }
+.sp-search-count{ font-size: 12px; color: var(--muted); font-weight: 800; }
+.sp-search-empty{
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px dashed var(--border);
+  color: var(--muted);
+}
+.sp-search-results{ margin-top: 12px; display: grid; gap: 14px; }
+.sp-search-section-title{ font-size: 12px; font-weight: 900; color: var(--muted); margin-bottom: 8px; }
+.sp-search-none{ font-size: 13px; color: var(--muted); }
+.sp-search-list{ display: grid; gap: 8px; }
+.sp-search-item{
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 14px;
+  cursor: pointer;
+  text-align: left;
+}
+.sp-search-item:hover{ transform: translateY(-1px); box-shadow: 0 10px 24px rgba(0,0,0,0.10); }
+.sp-search-item-main{ min-width: 0; }
+.sp-search-item-title{ font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-search-item-title.is-done{ text-decoration: line-through; color: var(--muted); }
+.sp-search-item-sub{ margin-top: 4px; font-size: 12px; color: var(--muted); font-weight: 700; }
+.sp-search-item-tag{
+  font-size: 10px;
+  font-weight: 900;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.sp-search{
+  margin-bottom: 25px; /* 검색 카드 아래 간격 */
+}
