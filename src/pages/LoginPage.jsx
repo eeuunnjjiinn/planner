@@ -4,6 +4,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
+  sendEmailVerification,
+  signOut,
 } from "firebase/auth";
 
 export default function LoginPage() {
@@ -24,7 +26,33 @@ export default function LoginPage() {
     }
 
     try {
-      await signInWithEmailAndPassword(auth, email, pw);
+      const cred = await signInWithEmailAndPassword(auth, email, pw);
+      const user = cred.user;
+
+      // ✅ 최신 인증 상태 반영
+      await user.reload();
+
+      if (!user.emailVerified) {
+        // (선택) 미인증이면 인증 메일 재전송 안내
+        const resend = window.confirm(
+          "이메일 인증이 아직 완료되지 않았어요.\n지금 인증 메일을 다시 보내드릴까요?"
+        );
+
+        if (resend) {
+          try {
+            await sendEmailVerification(user);
+            alert("인증 메일을 다시 보냈어요! (스팸함도 확인해 주세요)");
+          } catch (err) {
+            alert("인증 메일 재전송에 실패했어요. 잠시 후 다시 시도해 주세요.");
+          }
+        }
+
+        // ✅ 인증 전에는 앱에 못 들어가게 로그아웃
+        await signOut(auth);
+        return;
+      }
+
+      // ✅ 인증 완료된 경우: 그대로 진행 (App.jsx의 onAuthStateChanged가 화면 전환)
     } catch (error) {
       alert("로그인 실패! 이메일 또는 비밀번호를 확인하세요.");
     }
@@ -38,22 +66,40 @@ export default function LoginPage() {
     }
 
     try {
-      await createUserWithEmailAndPassword(auth, email, pw);
-      alert("회원가입 완료! 이제 로그인하세요.");
+      const cred = await createUserWithEmailAndPassword(auth, email, pw);
+      const user = cred.user;
+
+      // ✅ 이메일 인증 메일 발송
+      await sendEmailVerification(user);
+
+      // ✅ 인증 전에는 앱에 못 들어가게 로그아웃
+      await signOut(auth);
+
+      alert(
+        "회원가입 완료!\n입력한 이메일로 인증 메일을 보냈어요.\n메일 인증 후 로그인해 주세요. (스팸함도 확인!)"
+      );
     } catch (error) {
-      alert("회원가입 실패! 다시 시도하세요.");
+      const code = error?.code || "";
+      if (code === "auth/email-already-in-use") {
+        alert("이미 가입된 이메일이에요. 로그인하거나 비밀번호 찾기를 이용해 주세요.");
+      } else if (code === "auth/invalid-email") {
+        alert("이메일 형식이 올바르지 않아요.");
+      } else if (code === "auth/weak-password") {
+        alert("비밀번호가 너무 약해요. 더 강한 비밀번호로 설정해 주세요.");
+      } else {
+        alert("회원가입 실패! 다시 시도해 주세요.");
+      }
     }
   };
 
   // 비밀번호 찾기 열기
   const openResetModal = () => {
-    // 로그인 입력창에 이메일이 이미 있으면 그걸 기본값으로 넣어줌
     setResetEmail((email || "").trim());
     setIsResetOpen(true);
   };
 
   const closeResetModal = () => {
-    if (resetSending) return; // 전송 중엔 닫기 방지(원하면 빼도 됨)
+    if (resetSending) return;
     setIsResetOpen(false);
   };
 
@@ -87,7 +133,6 @@ export default function LoginPage() {
     }
   };
 
-  // 모달에서 Enter 누르면 전송
   const onResetKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -140,7 +185,7 @@ export default function LoginPage() {
         </form>
       </div>
 
-      {/* ✅ 비밀번호 찾기 모달 */}
+      {/* 비밀번호 찾기 모달 */}
       {isResetOpen && (
         <div
           role="dialog"
