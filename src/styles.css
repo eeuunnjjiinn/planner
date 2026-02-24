@@ -1190,3 +1190,76 @@ html.dark .tt-day-col{
 html.dark .tt-slot{
   border-bottom-color: rgba(148,163,184,0.16) !important;
 }
+
+/* =========================
+   Dark mode: Assessments Panel
+   ========================= */
+
+/* 패널 전체(흰 박스) */
+html.dark .assess-panel{
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+  box-shadow: var(--shadow) !important;
+  color: var(--text) !important;
+}
+
+/* 제목/설명 */
+html.dark .assess-title{ color: var(--text) !important; }
+html.dark .assess-sub{ color: var(--muted) !important; }
+
+/* +과제 / +시험 버튼 */
+html.dark .assess-actions .btn{
+  background: color-mix(in srgb, var(--card) 85%, var(--bg)) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+/* 필터 칩(전체/과제/시험/미완료) */
+html.dark .chip{
+  background: transparent !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+html.dark .chip.is-active{
+  background: rgba(148,163,184,0.16) !important;
+  border-color: rgba(148,163,184,0.22) !important;
+}
+
+/* 리스트가 비었을 때 박스 */
+html.dark .assess-empty{
+  background: transparent !important;
+  border-color: rgba(148,163,184,0.22) !important;
+  color: var(--muted) !important;
+}
+
+/* 항목 카드 */
+html.dark .assess-item{
+  background: color-mix(in srgb, var(--card) 92%, var(--bg)) !important;
+  border-color: rgba(148,163,184,0.18) !important;
+  color: var(--text) !important;
+}
+
+html.dark .assess-name{ color: var(--text) !important; }
+html.dark .assess-row2{ color: var(--muted) !important; }
+
+/* =========================
+   Dark mode: Left tabs (할 일 / 시험·과제)
+   ========================= */
+html.dark .lp-tabs{
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+}
+
+html.dark .lp-tab{
+  color: var(--text) !important;
+}
+
+html.dark .lp-tab:hover{
+  background: rgba(148,163,184,0.12) !important;
+}
+
+html.dark .lp-tab.is-active{
+  background: #2563eb !important;   /* 활성 탭 */
+  color: #ffffff !important;
+}
